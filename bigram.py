@@ -7,7 +7,7 @@ blockSize = 8
 maxIterations = 3000
 evalInterval = 300
 learningRate = 1e-2
-device = "cude" if torch.cuda.is_available() else "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 evalIterations = 300
 
 # Get Don Quixote text from local file
