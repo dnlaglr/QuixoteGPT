@@ -181,6 +181,8 @@ m = model.to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
 
 for epoch in range(maxIterations):
+  print(f"Iteration {epoch + 1}/{maxIterations}")
+
   if epoch % evalInterval == 0 or epoch == maxIterations - 1:
     losses = estimateLoss()
     print(f"Step {epoch}: Train Loss {losses['train']:.4f}, Val Loss {losses['val']:.4f}")
