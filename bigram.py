@@ -111,10 +111,12 @@ class Block(nn.Module):
     headSize = numEmbed // numHeads
     self.sa = MultiHead(numHeads, headSize)
     self.feedFwd = FeedForward(numEmbed)
+    self.layerNorm1 = nn.LayerNorm(numEmbed)
+    self.layerNorm2 = nn.LayerNorm(numEmbed)
 
   def forward(self, x):
-    x = x + self.sa(x)
-    x = x + self.feedFwd(x)
+    x = x + self.sa(self.layerNorm1(x))
+    x = x + self.feedFwd(self.layerNorm2(x))
     return x
 
 class BigramLM(nn.Module):
@@ -127,7 +129,8 @@ class BigramLM(nn.Module):
     self.blocks = nn.Sequential(
       Block(numEmbed, numHeads=4),
       Block(numEmbed, numHeads=4),
-      Block(numEmbed, numHeads=4)
+      Block(numEmbed, numHeads=4),
+      nn.LayerNorm(numEmbed)
     )
     self.lmHead = nn.Linear(numEmbed, vocabSize)
 
