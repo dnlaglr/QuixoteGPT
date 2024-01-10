@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as Fn
+import os
 
 batchSize = 64
 blockSize = 256
@@ -175,24 +176,41 @@ class BigramLM(nn.Module):
       idx = torch.cat((idx, nextIdx), dim=1) # Create (B, T + 1) by concatinating sample idx to running sequence
     return idx
 
-model = BigramLM(vocabSize)
-m = model.to(device)
+quixotePath = "models/quixote-mdl"
+if os.path.exists(quixotePath):
+  model = BigramLM(vocabSize)
+  model.load_state_dict(torch.load(quixotePath))
+  model = model.to(device)
+  print("Loaded model")
+else:
+  model = BigramLM(vocabSize)
+  m = model.to(device)
 
-optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
+  optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
 
-for epoch in range(maxIterations):
-  print(f"Iteration {epoch + 1}/{maxIterations}")
+  for epoch in range(maxIterations):
+    if epoch % 100 == 0:
+      print(f"Iteration {epoch}/{maxIterations}")
 
-  if epoch % evalInterval == 0 or epoch == maxIterations - 1:
-    losses = estimateLoss()
-    print(f"Step {epoch}: Train Loss {losses['train']:.4f}, Val Loss {losses['val']:.4f}")
+    if epoch % evalInterval == 0 or epoch == maxIterations - 1:
+      losses = estimateLoss()
+      print(f"Step {epoch}: Train Loss {losses['train']:.4f}, Val Loss {losses['val']:.4f}")
 
-  xb, yb = getBatch('train')
+      context = torch.zeros((1 , 1), dtype=torch.long, device=device)
+      print(decode(m.generate(context, maxNewTokens=500)[0].tolist()))
 
-  logits, loss = model(xb, yb)
-  optimizer.zero_grad(set_to_none=True)
-  loss.backward()
-  optimizer.step()
+    xb, yb = getBatch('train')
 
-context = torch.zeros((1 , 1), dtype=torch.long, device=device)
-print(decode(m.generate(context, maxNewTokens=500)[0].tolist()))
+    logits, loss = model(xb, yb)
+    optimizer.zero_grad(set_to_none=True)
+    loss.backward()
+    optimizer.step()
+
+  generatedOutPath = "generated/quixote-generated-text.txt"
+  with open(generatedOutPath, 'w', encoding="utf-8") as genFile:
+    generatedText = decode(m.generate(context, maxNewTokens=10000)[0].tolist())
+    genFile.write(generatedText)
+    print(f"Generated text saved to {generatedOutPath}")
+
+  torch.save(model, "models/quixote-mdl")
+  print("Saved model")
