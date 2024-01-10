@@ -179,9 +179,12 @@ class BigramLM(nn.Module):
 quixotePath = "models/quixote-mdl"
 if os.path.exists(quixotePath):
   model = BigramLM(vocabSize)
-  model.load_state_dict(torch.load(quixotePath))
+  model.load_state_dict(torch.load(quixotePath).state_dict())
   model = model.to(device)
   print("Loaded model")
+
+  context = torch.zeros((1 , 1), dtype=torch.long, device=device)
+  print(decode(model.generate(context, maxNewTokens=500)[0].tolist()))
 else:
   model = BigramLM(vocabSize)
   m = model.to(device)
