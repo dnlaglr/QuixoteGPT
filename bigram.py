@@ -2,14 +2,19 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as Fn
 
-batchSize = 32
-blockSize = 8
+batchSize = 64
+blockSize = 256
 maxIterations = 5000
-evalInterval = 300
-learningRate = 1e-3
+evalInterval = 500
+learningRate = 3e-4
 device = "cuda" if torch.cuda.is_available() else "cpu"
-evalIterations = 300
-numEmbed = 32
+evalIterations = 200
+numEmbed = 384
+numHeads = 6
+numLayers = 6
+dropout = 0.2 # Every forward / backward pass 20% of intermediate calculations are dropped to 0
+
+print(torch.cuda.is_available())
 
 # Get Don Quixote text from local file
 with open("datasets/quixote.txt", 'r', encoding="utf-8") as f:
@@ -62,6 +67,8 @@ class Head(nn.Module):
     self.value = nn.Linear(numEmbed, headSize, bias=False)
     self.register_buffer("tril", torch.tril(torch.ones(blockSize, blockSize)))
 
+    self.dropout = nn.Dropout(dropout)
+
   def forward(self, x):
     B, T, C = x.shape
     k = self.key(x) # (B, T, C)
@@ -71,6 +78,7 @@ class Head(nn.Module):
     weights = q @ k.transpose(-2, -1) * C ** -0.5 # (B, T, C) @ (B, C, T) = (B, T, T)
     weights = weights.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
     weights = Fn.softmax(weights, dim=-1) # (B, T, T)
+    weights = self.dropout(weights)
 
     # Perform weighted aggregation of the values
     v = self.value(x)
@@ -83,10 +91,11 @@ class MultiHead(nn.Module):
     super().__init__()
     self.heads = nn.ModuleList([Head(headSize) for _ in range(numHeads)])
     self.proj = nn.Linear(numEmbed, numEmbed)
+    self.dropout = nn.Dropout(dropout)
 
   def forward(self, x):
     out = torch.cat([h(x) for h in self.heads], dim=-1)
-    out = self.proj(out)
+    out = self.dropout(self.proj(out))
     return out
 
 class FeedForward(nn.Module):
@@ -97,7 +106,8 @@ class FeedForward(nn.Module):
     self.net = nn.Sequential(
       nn.Linear(numEmbed, 4 * numEmbed), 
       nn.ReLU(),
-      nn.Linear(4 * numEmbed, numEmbed)
+      nn.Linear(4 * numEmbed, numEmbed),
+      nn.Dropout(dropout)
     )
 
   def forward(self, x):
@@ -126,12 +136,8 @@ class BigramLM(nn.Module):
     # Have each token read off the logits for next token from a lookup table
     self.tokenEmbeddingTable = nn.Embedding(vocabSize, numEmbed)
     self.posEmbeddingTable = nn.Embedding(blockSize, numEmbed)
-    self.blocks = nn.Sequential(
-      Block(numEmbed, numHeads=4),
-      Block(numEmbed, numHeads=4),
-      Block(numEmbed, numHeads=4),
-      nn.LayerNorm(numEmbed)
-    )
+    self.blocks = nn.Sequential(*[Block(numEmbed, numHeads=numHeads) for _ in range(numLayers)])
+    self.finalLN = nn.LayerNorm(numEmbed)
     self.lmHead = nn.Linear(numEmbed, vocabSize)
 
   def forward(self, idx, targets=None):
@@ -143,6 +149,7 @@ class BigramLM(nn.Module):
     # Token embeddings + position embeddings = Token identities and where they occur
     x = tokenEmbeds + posEmbeds # (B, T, C)
     x = self.blocks(x)
+    x = self.finalLN(x)
     logits = self.lmHead(x) # (B, T, vocabSize)
 
     if targets is None:
@@ -174,7 +181,7 @@ m = model.to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
 
 for epoch in range(maxIterations):
-  if epoch % evalInterval == 0:
+  if epoch % evalInterval == 0 or epoch == maxIterations - 1:
     losses = estimateLoss()
     print(f"Step {epoch}: Train Loss {losses['train']:.4f}, Val Loss {losses['val']:.4f}")
 
