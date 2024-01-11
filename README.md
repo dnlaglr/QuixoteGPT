@@ -5,9 +5,13 @@
 **Difference in data from 1st iteration to 5,000th:**  
 Total Training Time: **3.8 Hours**  
 Training Loss: **4.4665 &rarr; 1.0845**  
-Validation Loss: **4.4678&rarr;1.1984**  
+Validation Loss: **4.4678 &rarr; 1.1984**  
 
 ![Training and Validation Loss](/assets/loss-graph.svg)
+
+Total Training Time: **3.8 Hours**  
+Training Loss: **4.4665 &rarr; 1.0845**  
+Validation Loss: **4.4678 &rarr; 1.1984**  
 
 ## Training and Generation
 
