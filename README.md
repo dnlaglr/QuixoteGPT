@@ -14,7 +14,7 @@ Validation Loss: **4.4678 &rarr; 1.1984**
 
 See the completed 10,000 token generation at **[`docs/generatedText.md`](docs/generatedText.md "Navigate to markdown")**.
 
-See the generation progression during training at **[`docs/genProgress.md`](docs/genprogress.md "Navigate to markdown")**.
+See the generation progression during training at **[`docs/genProgress.md`](docs/genProgress.md "Navigate to markdown")**.
 
 ## Limitations
 
