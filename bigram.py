@@ -131,7 +131,7 @@ class Block(nn.Module):
     return x
 
 class BigramLM(nn.Module):
-  def __init__(self, vocabSize):
+  def __init__(self):
     super().__init__()
 
     # Have each token read off the logits for next token from a lookup table
@@ -176,17 +176,17 @@ class BigramLM(nn.Module):
       idx = torch.cat((idx, nextIdx), dim=1) # Create (B, T + 1) by concatinating sample idx to running sequence
     return idx
 
-quixotePath = "models/quixote-mdl"
-if os.path.exists(quixotePath):
-  model = BigramLM(vocabSize)
-  model.load_state_dict(torch.load(quixotePath).state_dict())
+modelPath = "models/quixote-mdl"
+if os.path.exists(modelPath):
+  model = BigramLM()
+  model.load_state_dict(torch.load(modelPath).state_dict())
   model = model.to(device)
-  print("Loaded model")
+  print(f"Loaded model from: {modelPath}")
 
   context = torch.zeros((1 , 1), dtype=torch.long, device=device)
   print(decode(model.generate(context, maxNewTokens=500)[0].tolist()))
 else:
-  model = BigramLM(vocabSize)
+  model = BigramLM()
   m = model.to(device)
 
   optimizer = torch.optim.AdamW(model.parameters(), lr=learningRate)
